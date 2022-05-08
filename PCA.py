@@ -125,7 +125,7 @@ def fancy_plots_1():
     plt.clf()
     # figsize accepts only inches.
     fig = plt.figure(1, figsize=fig_size)
-    fig.subplots_adjust(left=0.13, right=0.98, top=0.97, bottom=0.13,
+    fig.subplots_adjust(left=0.13, right=0.98, top=0.90, bottom=0.13,
                         hspace=0.05, wspace=0.02)
     plt.ioff()
     ax1 = fig.add_subplot(111)
@@ -160,19 +160,77 @@ def graficas_energia(S,S1):
     ax2.plot(np.cumsum(S1)/np.sum(S1),'-o',color='k')
     plt.show()
 
+def fancy_3d_plot():
+    # Define parameters fancy plot
+    pts_per_inch = 72.27
+    # write "\the\textwidth" (or "\showthe\columnwidth" for a 2 collumn text)
+    text_width_in_pts = 300.0
+    # inside a figure environment in latex, the result will be on the
+    # dvi/pdf next to the figure. See url above.
+    text_width_in_inches = text_width_in_pts / pts_per_inch
+    # make rectangles with a nice proportion
+    golden_ratio = 0.618
+    # figure.png or figure.eps will be intentionally larger, because it is prettier
+    inverse_latex_scale = 2
+    # when compiling latex code, use
+    # \includegraphics[scale=(1/inverse_latex_scale)]{figure}
+    # we want the figure to occupy 2/3 (for example) of the text width
+    fig_proportion = (3.0 / 3.0)
+    csize = inverse_latex_scale * fig_proportion * text_width_in_inches
+    # always 1.0 on the first argument
+    fig_size = (1.0 * csize, 0.7 * csize)
+    # find out the fontsize of your latex text, and put it here
+    text_size = inverse_latex_scale * 10
+    label_size = inverse_latex_scale * 10
+    tick_size = inverse_latex_scale * 8
+
+    params = {'backend': 'ps',
+            'axes.labelsize': text_size,
+            'legend.fontsize': tick_size,
+            'legend.handlelength': 2.5,
+            'legend.borderaxespad': 0,
+            'xtick.labelsize': tick_size,
+            'ytick.labelsize': tick_size,
+            'font.family': 'serif',
+            'font.size': text_size,
+            # Times, Palatino, New Century Schoolbook,
+            # Bookman, Computer Modern Roman
+            # 'font.serif': ['Times'],
+            'ps.usedistiller': 'xpdf',
+            'text.usetex': True,
+            'figure.figsize': fig_size,
+            # include here any neede package for latex
+            'text.latex.preamble': [r'\usepackage{amsmath}',
+                ],
+                }
+    plt.rcParams.update(params)
+    plt.clf()
+    # figsize accepts only inches.
+    fig = plt.figure(1, figsize=fig_size)
+    fig.subplots_adjust(left=0.13, right=0.98, top=0.90, bottom=0.13,
+                        hspace=0.05, wspace=0.02)
+    plt.ioff()
+    ax1 = fig.add_subplot(111, projection="3d")
+    return fig, ax1
 
 def new_dimention(v, data):
-    fig2 = plt.figure()
-    ax = fig2.add_subplot(111, projection='3d')
-    for j in range(data.shape[0]):
-        x =  np.dot(data[j,:],v[:,0])
-        y =  np.dot(data[j,:],v[:,1])
-        z =  np.dot(data[j,:],v[:,2])
-        if data[j,-1] == 1:
-            ax.scatter(x,y,z,marker='x',color='r',s=50)
+    X = data.T
+    fig2, ax = fancy_3d_plot()
+    for j in range(500):
+        x =  v[:,0].T@X[:,j]
+        y =  v[:,1].T@X[:,j]
+        z =  v[:,2].T@X[:,j]
+        if X[-1,j] == 1:
+            ax.scatter(x,y,z,marker='x',color="#00429d",s=10, label=r"$\textrm{Cancer}$")
         else:
-            ax.scatter(x,y,z,marker='o',color='b',s=50)
-    ax.view_init(25,20)
+            ax.scatter(x,y,z,marker='o',color='#9e4941',s=10, label=r"$\textrm{Cancer}$")
+    
+    ax.set_ylabel(r"$\textrm{PCA 2}$", rotation='vertical')
+    ax.set_xlabel(r"$\textrm{PCA 1}$", rotation='horizontal')
+    ax.set_zlabel(r"$\textrm{PCA 3}$", rotation='vertical')
+    fig2.savefig("PCA.eps", resolution=300)
+    fig2.savefig("PCA.png", resolution=300)
+    fig2
     plt.show()
 
 def fancy_plot_eig(S):
@@ -197,7 +255,7 @@ def fancy_plot_eig(S):
     ax2.set_ylabel(r"$\textrm{Acumulaive}$", rotation='vertical')
     ax2.set_xlabel(r'$[r]$', labelpad=5)
     ax2.legend([energy_plot],
-            [r'$energy$'],
+            [r'$Variabilidad$'],
             loc="best",
             frameon=True, fancybox=True, shadow=False, ncol=2,
             borderpad=0.5, labelspacing=0.5, handlelength=3, handletextpad=0.1,
@@ -230,7 +288,7 @@ def normilize_matrix(x):
 
 def main():
     ## Load Data 
-    data_cancer = read_data(path_cancer, delimitador)
+    data_cancer = read_data(path_diabetes, delimitador)
 
     ## Covariance Matrix
     C = media_vector(data_cancer)
@@ -238,12 +296,11 @@ def main():
     C_3 = np.cov(data_cancer.T)
 
     ## eig values and vectors
-    tic = time.time()
     e_1, v_1 = LA.eig(C_3)
-    toc = tic-time.time()
-    print(toc)
+
     e_1 = np.absolute(e_1)
     v_1 = np.absolute(v_1)
+
 
     ## Verificar norm = 1
     u_1 = v_1[:,0]
@@ -252,13 +309,12 @@ def main():
     norm_1 = np.dot(u_1,u_1)
     norm_2 = np.dot(u_2,u_2)
 
-    ## Fancy plots
-    fancy_plot_eig(e_1)
-
     ## fancy plot matrix
     fancy_plots_matrix(C)
-    fancy_plots_matrix(C_3)
+    fancy_plots_matrix(C_1)
 
+    ## Fancy plots
+    fancy_plot_eig(e_1)
 
     ## Figure new dimention
     new_dimention(v_1, data_cancer)
